@@ -11,6 +11,7 @@ import java.time.LocalDate;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.assertj.core.util.Lists;
 import org.junit.Before;
@@ -23,6 +24,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.cache.CacheManager;
+import org.springframework.cache.concurrent.ConcurrentMapCache;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -67,27 +69,60 @@ public class TripReportLookupControllerIT {
 	}
 	
 	@Test
-	public void givenAMedallionAndADate_whenFindTripReportCalled_thenReturnsTripCount() throws Exception {
-		assertEquals(3, invokeSingleMedallionService().getTripCount().intValue());
-		assertEquals(3, invokeSingleMedallionService().getTripCount().intValue());
-		assertEquals(3, invokeSingleMedallionService().getTripCount().intValue());
-		assertEquals(3, invokeSingleMedallionService().getTripCount().intValue());
+	public void givenAMedallionAndADate_whenFindTripReportCalledWithCache_thenReturnsTripCount() throws Exception {
+		assertEquals(3, invokeSingleMedallionServiceWithCache().getTripCount().intValue());
+		assertEquals(3, invokeSingleMedallionServiceWithCache().getTripCount().intValue());
+		assertEquals(3, invokeSingleMedallionServiceWithCache().getTripCount().intValue());
+		assertEquals(3, invokeSingleMedallionServiceWithCache().getTripCount().intValue());
 		Mockito.verify(lookupService, Mockito.times(1)).lookupTripReport(anyString(), any(LocalDate.class));
 	}
 	@Test
-	public void givenAListOfmedallions_whenFindTripReportCalled_thenReturnsTripCountForEachForToday() throws Exception {
-		assertEquals(2, invokeMultiMedallionService().size());
-		assertEquals(2, invokeMultiMedallionService().size());
-		assertEquals(2, invokeMultiMedallionService().size());
-		assertEquals(2, invokeMultiMedallionService().size());
+	public void givenAListOfmedallions_whenFindTripReportCalledWithCache_thenReturnsTripCountForEachForToday() throws Exception {
+		assertEquals(2, invokeMultiMedallionServiceWithCache().size());
+		assertEquals(2, invokeMultiMedallionServiceWithCache().size());
+		assertEquals(2, invokeMultiMedallionServiceWithCache().size());
+		assertEquals(2, invokeMultiMedallionServiceWithCache().size());
 		Mockito.verify(lookupService, Mockito.times(1)).lookupTripReportForToday(any(String[].class));
 	}
-	
-	private TripReportModel invokeSingleMedallionService() throws Exception {
+
+	@Test
+	public void givenAMedallionAndADate_whenFindTripReportCalledWithoutCache_thenReturnsTripCount() throws Exception {
+		assertEquals(3, invokeSingleMedallionServiceWithoutCache().getTripCount().intValue());
+		assertEquals(3, invokeSingleMedallionServiceWithoutCache().getTripCount().intValue());
+		assertEquals(3, invokeSingleMedallionServiceWithoutCache().getTripCount().intValue());
+		assertEquals(3, invokeSingleMedallionServiceWithoutCache().getTripCount().intValue());
+		Mockito.verify(lookupService, Mockito.times(4)).lookupTripReport(anyString(), any(LocalDate.class));
+	}
+	@Test
+	public void givenAListOfmedallions_whenFindTripReportCalledWithoutCache_thenReturnsTripCountForEachForToday() throws Exception {
+		assertEquals(2, invokeMultiMedallionServiceWithoutCache().size());
+		assertEquals(2, invokeMultiMedallionServiceWithoutCache().size());
+		assertEquals(2, invokeMultiMedallionServiceWithoutCache().size());
+		assertEquals(2, invokeMultiMedallionServiceWithoutCache().size());
+		Mockito.verify(lookupService, Mockito.times(4)).lookupTripReportForToday(any(String[].class));
+	}
+
+	@Test
+	public void shouldBeAbleToClearAllCache() throws Exception {
+		doEvictCacheEndpoint();
+		cacheManager.getCacheNames().forEach(cache -> assertEquals(0, ((ConcurrentHashMap)(cacheManager.getCache(cache).getNativeCache())).size()));
+	}
+
+	private TripReportModel invokeSingleMedallionServiceWithCache() throws Exception {
 		return new RestTemplate().getForEntity("http://localhost:"+port+"/tripreport/tripCount/medallion/ABC/on/"+ dateStr, TripReportModel.class).getBody();
 	}
-	private Collection<TripReportModel> invokeMultiMedallionService() throws Exception {
+	private TripReportModel invokeSingleMedallionServiceWithoutCache() throws Exception {
+		return new RestTemplate().getForEntity("http://localhost:"+port+"/tripreport/tripCount/medallion/ABC/on/"+ dateStr+"?noCache=true", TripReportModel.class).getBody();
+	}
+	private Collection<TripReportModel> invokeMultiMedallionServiceWithCache() throws Exception {
 		return new RestTemplate().exchange("http://localhost:"+port+"/tripreport/tripsFor?medallion=ABC&medallion=DEF", HttpMethod.GET, null,
 				new ParameterizedTypeReference<List<TripReportModel>>() {}).getBody();
+	}
+	private Collection<TripReportModel> invokeMultiMedallionServiceWithoutCache() throws Exception {
+		return new RestTemplate().exchange("http://localhost:"+port+"/tripreport/tripsFor?medallion=ABC&medallion=DEF&noCache=true", HttpMethod.GET, null,
+				new ParameterizedTypeReference<List<TripReportModel>>() {}).getBody();
+	}
+	private void doEvictCacheEndpoint() {
+		new RestTemplate().getForEntity("http://localhost:"+port+"/tripreport/cache/clear", Void.class);
 	}
 }

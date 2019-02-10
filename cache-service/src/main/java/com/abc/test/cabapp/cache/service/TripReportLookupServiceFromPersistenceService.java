@@ -10,6 +10,7 @@ import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
@@ -35,11 +36,6 @@ public class TripReportLookupServiceFromPersistenceService implements TripReport
 		this.host = host;
 		this.port = port;
 	}
-	@Override
-	@Cacheable(value = "trip-report", keyGenerator = "customTriReportKeyGenerator", sync = true)
-	public TripReportModel lookupTripReport(String medallion, LocalDate tripDate) {
-		return template.getForObject(buildLookupURIWithPathVariable(Endpoint.REPORT_SINGLE_ENDPT, medallion, formatter.format(tripDate)), TripReportModel.class);
-	}
 	public String buildLookupURIWithPathVariable(Endpoint endpoint, Object ... params) {
 		return UriComponentsBuilder.fromPath(endpoint.getEndpointUri()).scheme(scheme)
 				.host(host).port(port).buildAndExpand(params).toUriString();
@@ -51,12 +47,30 @@ public class TripReportLookupServiceFromPersistenceService implements TripReport
 		return uriComponentsBuilder.build().toUriString();
 	}
 	@Override
-	@Cacheable(value = "trip-reports", sync = true)
+	@CachePut(value = "trip-report", keyGenerator = "customTriReportKeyGenerator", condition = "#result != null")
+	public TripReportModel lookupTripReport(String medallion, LocalDate tripDate) {
+		return template.getForObject(buildLookupURIWithPathVariable(Endpoint.REPORT_SINGLE_ENDPT, medallion, formatter.format(tripDate)), TripReportModel.class);
+	}
+
+	@Override
+	@CachePut(value = "trip-reports", condition = "#result != null")
 	public Collection<TripReportModel> lookupTripReportForToday(String[] medallions) {
 		Map<String, Object[]> params = new HashMap<>();
 		params.put(Endpoint.REPORT_MULTI_ENDPT.getQueryParameterNames()[0], medallions);
 		ResponseEntity<List<TripReportModel>> reportEntities = template.exchange(buildLookupURIWithQueryParams(Endpoint.REPORT_MULTI_ENDPT, params)
 				, HttpMethod.GET, null, new ParameterizedTypeReference<List<TripReportModel>>() {});
 		return reportEntities.getBody();
+	}
+
+	@Override
+	@Cacheable(value = "trip-report", keyGenerator = "customTriReportKeyGenerator", sync = true)
+	public TripReportModel lookupTripReportFromCache(String medallion, LocalDate date) {
+		return lookupTripReport(medallion, date);
+	}
+
+	@Override
+	@Cacheable(value = "trip-reports", sync = true)
+	public Collection<TripReportModel> lookupTripReportForTodayFromCache(String[] medallions) {
+		return lookupTripReportForToday(medallions);
 	}
 }

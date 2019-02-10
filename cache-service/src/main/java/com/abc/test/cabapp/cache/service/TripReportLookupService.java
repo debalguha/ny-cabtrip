@@ -11,4 +11,7 @@ public interface TripReportLookupService {
 
 	Collection<TripReportModel> lookupTripReportForToday(String[] medallions);
 
+	TripReportModel lookupTripReportFromCache(String medallion, LocalDate toLocalDate);
+
+	Collection<TripReportModel> lookupTripReportForTodayFromCache(String[] medallions);
 }

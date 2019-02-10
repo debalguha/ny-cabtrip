@@ -36,6 +36,7 @@ public class TripReportLookupControllerTest {
 	@Test
 	public void shouldBeAbleToInvokeServiceAndreturnJson() throws Exception {
 		when(service.lookupTripReport(anyString(), any(LocalDate.class))).thenReturn(new TripReportModel("ABC", Date.from(Instant.now()), 5));
+		when(service.lookupTripReportFromCache(anyString(), any(LocalDate.class))).thenReturn(new TripReportModel("ABC", Date.from(Instant.now()), 5));
 		mvc.perform(get("/tripreport/tripCount/medallion/ABC/on/20190206")
 			      .contentType(MediaType.APPLICATION_JSON))
 			      .andExpect(status().isOk())
@@ -45,6 +46,8 @@ public class TripReportLookupControllerTest {
 	@Test
 	public void shouldBeAbleToFindReportsForMedallions() throws Exception {
 		when(service.lookupTripReportForToday(any(String[].class))).thenReturn(Lists.list(new TripReportModel("ABC", Date.from(Instant.now()), 5),
+				new TripReportModel("DEF", Date.from(Instant.now()), 5)));
+		when(service.lookupTripReportForTodayFromCache(any(String[].class))).thenReturn(Lists.list(new TripReportModel("ABC", Date.from(Instant.now()), 5),
 				new TripReportModel("DEF", Date.from(Instant.now()), 5)));
 		mvc.perform(get("/tripreport/tripsFor?medallion=ABC&medallion=DEF")
 			      .contentType(MediaType.APPLICATION_JSON))
