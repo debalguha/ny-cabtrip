@@ -1,30 +1,25 @@
 package com.abc.test.cabapp.cache.web;
 
-import java.time.ZoneId;
-import java.util.Collection;
-import java.util.Date;
-
+import com.abc.test.cabapp.cache.service.TripReportLookupService;
 import com.abc.test.cabapp.common.model.TripReportModel;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Caching;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.abc.test.cabapp.cache.service.TripReportLookupService;
+import java.time.ZoneId;
+import java.util.Collection;
+import java.util.Date;
 
 @RestController
 public class TripReportLookupController {
 	private TripReportLookupService lookupService;
-	//private CacheManager cacheManager;
 	
 	public TripReportLookupController(@Autowired TripReportLookupService lookupService) {
 		this.lookupService = lookupService;
-		//this.cacheManager = cacheManager;
 	}
 
 	@GetMapping("/tripreport/cache/clear")
