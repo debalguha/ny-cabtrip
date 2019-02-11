@@ -17,7 +17,7 @@ import java.util.Date;
 @RestController
 public class TripReportLookupController {
 	private TripReportLookupService lookupService;
-	
+
 	public TripReportLookupController(@Autowired TripReportLookupService lookupService) {
 		this.lookupService = lookupService;
 	}
